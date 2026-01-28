@@ -1,0 +1,66 @@
+- name: Deploy static website to web servers
+  hosts: webservers
+  become: yes
+ 
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+ 
+    - name: Install Apache
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+ 
+    - name: Ensure Apache is enabled and running
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: yes
+ 
+    - name: Ensure web root exists
+      ansible.builtin.file:
+        path: /var/www/html
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+ 
+    - name: Copy HTML/CSS/JS files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      with_fileglob:
+        - "*.html"
+        - "*.css"
+        - "*.js"
+ 
+    - name: Copy image files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      with_fileglob:
+        - "*.jpg"
+        - "*.jpeg"
+        - "*.png"
+        - "*.gif"
+        - "*.svg"
+        - "*.webp"
+ 
+    - name: Remove default Apache index if you provide your own index.html
+      ansible.builtin.file:
+        path: /var/www/html/index.html
+        state: absent
+      when: "'index.html' in lookup('fileglob', '*.html', wantlist=True)"
+ 
+    - name: Restart Apache to apply changes
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
